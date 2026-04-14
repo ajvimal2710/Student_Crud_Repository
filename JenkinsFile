@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven_built_tool'
+    }
+
+    environment {
+        DOCKER_IMAGE = 'student-crud'
+        CONTAINER_NAME = 'student-container'
+        APP_PORT = '9000'   // change if needed
+        HOST_PORT = '8000'
+    }
+
+    stages {
+
+        stage('Git Clone') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github_credential',
+                    url: 'https://github.com/ajvimal2710/Student_Crud_Repository.git'
+            }
+        }
+
+        stage('List Files') {
+            steps {
+                bat 'dir'
+            }
+        }
+
+        stage('JUnit Test') {
+            steps {
+                {
+                    bat 'mvn test'
+                }
+            }
+        }
+
+        stage('Maven Build') {
+            steps {
+                {
+                    bat 'mvn clean install -DskipTests=true'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                {
+                    bat "docker build -t %DOCKER_IMAGE% ."
+                }
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                bat """
+                docker rm -f %CONTAINER_NAME% || echo not exists
+                docker run -d -p %HOST_PORT%:%APP_PORT% --name %CONTAINER_NAME% %DOCKER_IMAGE%
+                docker ps
+                """
+            }
+        }
+    }
+}
