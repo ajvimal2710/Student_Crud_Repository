@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.start</groupId>
-	<artifactId>For_Jenkins</artifactId>
+	<artifactId>Student_CRUD</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>
