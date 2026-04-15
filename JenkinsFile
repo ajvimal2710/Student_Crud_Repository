@@ -64,7 +64,7 @@ pipeline {
                 docker run -d --name mysql --network %NETWORK_NAME% ^
                 -e MYSQL_ROOT_PASSWORD=Avimal@2710 ^
                 -e MYSQL_DATABASE=sstudent_db ^
-                -p 3307:3306 mysql:8
+                -p 3305:3306 mysql:8
                 """
                 
             }
