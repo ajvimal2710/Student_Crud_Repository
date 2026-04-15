@@ -62,10 +62,11 @@ pipeline {
                 bat 'docker rm -f mysql || echo not exists'
                 bat """
                 docker run -d --name mysql --network %NETWORK_NAME% ^
-                -e MYSQL_ROOT_PASSWORD=${DB_PWD} ^
-                -e MYSQL_DATABASE=${DB_NAME} ^
+                -e MYSQL_ROOT_PASSWORD=Avimal@2710 ^
+                -e MYSQL_DATABASE=sstudent_db ^
                 -p 3307:3306 mysql:8
                 """
+                
             }
         }
 
