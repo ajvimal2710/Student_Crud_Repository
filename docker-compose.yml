@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+
+  consul:
+    image: hashicorp/consul
+    container_name: consul
+    command: agent -dev -client=0.0.0.0
+    ports:
+      - "8500:8500"
+    networks:
+      - student-network
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Avimal@2710
+      MYSQL_DATABASE: sstudent_db
+    ports:
+      - "3307:3306"
+    networks:
+      - student-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  Student-CURD:
+    build:
+      context: ./
+    container_name: Student-CURD
+    ports:
+      - "8000:9000"
+    depends_on:
+      - mysql
+      - consul
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/sstudent_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Avimal@2710
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+    networks:
+      - student-network
+
+networks:
+ student-network:
+
+volumes:
+  mysql-data:

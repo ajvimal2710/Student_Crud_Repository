@@ -1,63 +1,90 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'maven_built_tool'
-    }
-
     environment {
         DOCKER_IMAGE = 'student-crud'
         CONTAINER_NAME = 'student-container'
-        APP_PORT = '9000'   // change if needed
-        HOST_PORT = '8000'
+        NETWORK_NAME = 'student-network'
+        // Using your specific DB details from your previous properties
+        DB_NAME = 'sstudent_db'
+        DB_PWD = 'Avimal@2710'
     }
 
     stages {
-
-        stage('Git Clone') {
+        stage('git clone') {
             steps {
-                git branch: 'main',
-                    credentialsId: 'github_credential',
+                git branch: 'main', 
+                    credentialsId: 'Git', 
                     url: 'https://github.com/ajvimal2710/Student_Crud_Repository.git'
             }
         }
 
-        stage('List Files') {
+        stage('list files') {
             steps {
                 bat 'dir'
             }
         }
 
-        stage('JUnit Test') {
-            steps {
-                {
-                    bat 'mvn test'
-                }
-            }
-        }
-
         stage('Maven Build') {
             steps {
-                {
-                    bat 'mvn clean install -DskipTests=true'
-                }
+                // We use & to combine commands in one line for Windows
+                bat "set JAVA_HOME=C:\\Program Files\\Java\\jdk-21&& set PATH=%JAVA_HOME%\\bin;%PATH%&& mvn clean install"
             }
         }
-
-        stage('Docker Build') {
+       
+        stage('Docker Image creation phase') {
             steps {
-                {
-                    bat "docker build -t %DOCKER_IMAGE% ."
-                }
+                bat 'docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% .'
+                
             }
         }
 
-        stage('Deploy Container') {
+        stage('Create Docker Network') {
+            steps {
+                // Checks if network exists, creates it if not (Windows syntax)
+                bat 'docker network inspect %NETWORK_NAME% >nul 2>&1 || docker network create %NETWORK_NAME%'
+            }
+        }
+
+        stage('Start Consul') {
+            steps {
+                bat 'docker rm -f consul || echo not exists'
+                bat '''
+                docker run -d --name consul --network %NETWORK_NAME% ^
+                -p 8500:8500 ^
+                hashicorp/consul agent -dev -client=0.0.0.0
+                '''
+            }
+        }
+
+        stage('Start MySQL') {
+            steps {
+                bat 'docker rm -f mysql || echo not exists'
+                bat """
+                docker run -d --name mysql --network %NETWORK_NAME% ^
+                -e MYSQL_ROOT_PASSWORD=${DB_PWD} ^
+                -e MYSQL_DATABASE=${DB_NAME} ^
+                -p 3307:3306 mysql:8
+                """
+            }
+        }
+
+        stage('Delete old Docker container') {
+            steps {
+                bat 'docker rm -f %CONTAINER_NAME% || echo not exists'
+            }
+        }
+
+        stage('Docker container run phase') {
             steps {
                 bat """
-                docker rm -f %CONTAINER_NAME% || echo not exists
-                docker run -d -p %HOST_PORT%:%APP_PORT% --name %CONTAINER_NAME% %DOCKER_IMAGE%
-                docker ps
+                docker run -d --name %CONTAINER_NAME% --network %NETWORK_NAME% ^
+                -p 8000:9000 ^
+                -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${DB_NAME} ^
+                -e SPRING_DATASOURCE_USERNAME=root ^
+                -e SPRING_DATASOURCE_PASSWORD=${DB_PWD} ^
+                -e SPRING_CLOUD_CONSUL_HOST=consul ^
+                %DOCKER_IMAGE%:%BUILD_NUMBER%
                 """
             }
         }
